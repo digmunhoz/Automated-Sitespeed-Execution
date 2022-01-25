@@ -1,17 +1,6 @@
 version: '3'
-networks:
-  private:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 10.1.1.0/29
 services:
   sitespeed:
-    networks:
-      private:
-        ipv4_address: 10.1.1.2
-        aliases:
-         - sitespeed
     container_name: sitespeed
     image: sitespeedio/sitespeed.io
     command: ["/mnt/urls.txt", "--config", "/mnt/config.json"]
@@ -20,46 +9,41 @@ services:
       - ./config.json:/mnt/config.json:ro
       - ./urls.txt:/mnt/urls.txt:ro
       - ./data/sitespeed-result/:/sitespeed.io/sitespeed-result
-  # grafana:
-  #   networks:
-  #     private:
-  #       ipv4_address: 10.1.1.4
-  #       aliases:
-  #        - grafana
-  #   container_name: grafana
-  #   image: grafana/grafana
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./data/grafana:/var/lib/grafana:rw
-  #   depends_on:
-  #     - statsd
-  #   environment:
-  #     GF_SECURITY_ADMIN_USER: admin
-  #     GF_SECURITY_ADMIN_PASSWORD: admin
-  #     GF_AUTH_ANONYMOUS_ENABLED: "true"
-  #     GF_USERS_ALLOW_SIGN_UP: "false"
-  #     GF_USERS_ALLOW_ORG_CREATE: "false"
-  # statsd:
-  #   networks:
-  #     private:
-  #       ipv4_address: 10.1.1.5
-  #       aliases:
-  #        - statsd
-  #   container_name: statsd
-  #   image: graphiteapp/graphite-statsd
-  #   ports:
-  #     - "80:80"
-  #     - "2003-2004:2003-2004"
-  #     - "2023-2024:2023-2024"
-  #     - "8125:8125/udp"
-  #     - "8126:8126"
-  #   # restart: always
-  #   volumes:
-  #     # - ./data/whisper:/opt/graphite/storage/whisper:rw
-  #     - ./data/graphite:/opt/graphite/storage:rw
-  # grafana-setup:
-  #   image: sitespeedio/grafana-bootstrap:8.8.0
-  #   environment:
-  #     GF_PASSWORD: admin
-  #     GF_USER: admin
+  grafana:
+    image: grafana/grafana:8.2.3
+    hostname: grafana
+    depends_on:
+      - graphite
+    links:
+      - graphite
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=hdeAga76VG6ga7plZ1
+      - GF_SECURITY_ADMIN_USER=sitespeedio
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_ORG_CREATE=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana:/var/lib/grafana
+    restart: always
+  graphite:
+    image: sitespeedio/graphite:1.1.7-9
+    hostname: graphite
+    ports:
+      - "2003:2003"
+      - "8080:80"
+    # restart: always
+    volumes:
+      - whisper:/opt/graphite/storage/whisper
+  grafana-setup:
+    image: sitespeedio/grafana-bootstrap:20.4.0
+    links:
+      - grafana
+    environment:
+      - GF_PASSWORD=hdeAga76VG6ga7plZ1
+      - GF_USER=sitespeedio
+volumes:
+    grafana:
+    whisper:
